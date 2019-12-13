@@ -78,7 +78,7 @@
         core_slice = core_deletedIds.slice,
         core_indexOf = core_deletedIds.indexOf,
         core_toString = class2type.toString,
-        core_hasOwn = class2type.hasOwnProperty, // 方法返回一个布尔值，判断对象是否包含特定的自身（非继承）属性。
+        core_hasOwn = class2type.hasOwnProperty, //查看对象是否有自身的属性自身的属性 方法返回一个布尔值。 
         core_trim = core_version.trim, // 去前后空格
         /**
          * 对外提供的方法接口 挂载到window上$ jQuery
@@ -91,7 +91,7 @@
          *  var al = new Aaa();
          *  al.init();
          *  al.css()
-         * ------------------------------------
+         * ---------------------------------------
          * jq中
          * function jQuery(){
          *      return new jQuery.prototype.init();
@@ -99,8 +99,8 @@
          * jQuery.prototype.init = function(){}
          * jQuery.prototype.css = function (){}
          * jQuery().css();调用 相当于直接实例化jQuery并调用init的方法，省去了以往的繁琐的过程，直接使用原型上的css方法，不过此时init上并没有css方法
-         * jQuery.fn.init.prototype = JQuery.prototype; 此时将jq的原型赋值给jQuery.fn.init函数的原型上，就形成了一个对象的引用，此时在jq原型上与init原型上修改是一样的，所以jq上的所有方法都可以通过，new 出来的方法来使用
-         * 
+         * jQuery.fn.init.prototype = JQuery.prototype; 此时将jq的原型赋值给jQuery.fn.init函数的原型上，
+         * 就形成了一个对象的引用，此时在jq原型上与init原型上修改是一样的，所以jq上的所有方法都可以通过，new 出来的方法来使用
          * */ 
         // Define a local copy of jQuery
         jQuery = function(selector, context) {
@@ -470,7 +470,11 @@
         each: function(callback, args) {
             return jQuery.each(this, callback, args);
         },
-        // DOM加载接口
+        /** 
+         * DOM加载接口
+         * 页面中: $(function() {}) ==相当于调用==> $(document).ready(function(){}) 相当于 $().ready() ==而次函数又调用工具函数==> jQuery.ready.promise().done(fn) 这个函数jQuery.ready.promise()创建了一个延迟对象通过done方法将触发函数fn先存储起来
+         *  jQuery.ready.promise() ==函数创建对象且判断,无论if 还是 else 最后所走的都是 completed函数==> 最终执行都是$.ready()工具函数 ==次函数中主要执行==>readyList.resolveWith(document, [jQuery]);执行已经加载完成函数
+         **/
         ready: function(fn) {
             // Add the callback
             jQuery.ready.promise().done(fn);
@@ -498,7 +502,7 @@
         },
         // 找集合中指定的某一项
         eq: function(i) {
-             /** 
+            /** 
               * 获取this长度
               * 判断i
               * 然后进项入栈处理
@@ -583,6 +587,7 @@
      *  js 中常用类式继承 / 原型继承
      *     new 构造函数  / 利用原型prototype
      */
+    //  extend jq的继承方法 更容易进行扩展---------------------------------------------------------------------------------------------------------------
     jQuery.extend = jQuery.fn.extend = function() {
         var options, name, src, copy, copyIsArray, clone,
             target = arguments[0] || {}, // 在不是深拷贝的情况下 目标元素是设为实参第一项
@@ -617,7 +622,7 @@
                 for (name in options) {
                     src = target[name];
                     copy = options[name];
-                     /**
+                    /**
                      * 防止循环引用 例如 ：
                      *  var a = {};
                      *  $.extend(a, {name: a})
@@ -627,7 +632,6 @@
                     if (target === copy) {
                         continue;
                     }
-                   
                     // Recurse if we're merging plain objects or arrays
                     // 深拷贝 (jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy) 判断第三个参数是不是对象 或 数组
                     if (deep && copy && (jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)))) {
@@ -658,7 +662,7 @@
         return target;
     };
     /**
-     * 扩展工具方法 很对实例方法调用的都属jquery的工具方法 也可以 用于原生js
+     * 扩展工具方法 很多实例方法调用的都属jquery的工具方法 也可以 用于原生js
      */
     jQuery.extend({
         // Unique for each copy of jQuery on the page 页面上的每个jQuery副本都是唯一的
@@ -701,7 +705,19 @@
         },
 
         // Is the DOM ready to be used? Set to true once it occurs.DOM准备好使用了吗?一旦发生，设置为真。
-        // DOM是否加载完（内部使用）
+        /**
+         * DOM是否加载完（内部使用）
+         * 
+         * jq的dom加载事件 与 原声的dom加载事件区别
+         * $(function(){}) ==> 等DOM加载完才触发 
+         * window.onload = function() {} ==> 等页面中的所有东西都加载完才触发
+         * 例如：
+         *  <div>123</div>
+         *  <img src=''/>
+         *  js中先加载节点，在加载文件，jq是等节点都加载完毕就会触发，原生要等到src中的东西加载完毕
+         *  所以jq的加载速度要高于原生
+         *  DOMcontentLoaded 原生中实现DOM加载的事件， 只要这个事件一触发就说明DOM加载完了
+         */
         isReady: false,
 
         // A counter to track how many items to wait for before
@@ -710,11 +726,36 @@
         readyWait: 1,
 
         // Hold (or release) the ready event
-        // 推迟DOM触发
+        /**推迟DOM触发
+        *  例如在页面中动态引入其他js文件
+        * 此时, getScript是异步方法如果不使用 holdReady 函数会先执行alert, 如果要a.js引入完之后在执行,需要先holdReady
+        *  $.holdReady(true); // 可以阻断$(function() {alert(2);})执行
+        *  $.getScript('a.js', function() {
+        *       $.holdReady(false); // 当加载完之后再释放 可以执行$(function() {alert(2);})
+        *  })
+        * $(function() {
+        *   alert(2);
+        * })
+        * 
+        * 
+        * 
+        */
         holdReady: function(hold) {
             if (hold) {
+                /**
+                 * jQuery.readyWait++;为了处理有多个 文件引入的情况 依照次序加加 加载完之后 hold传入false时在调用jQuery.ready(true);进行依照次序减减
+                 *  $.holdReady(true);
+                 *  $.getScript('a.js', function() {
+                 *       $.holdReady(false);
+                 *  })
+                 *  $.holdReady(true);
+                 *  $.getScript('a.js', function() {
+                 *       $.holdReady(false);
+                 *  })
+                 */
                 jQuery.readyWait++;
             } else {
+                // holdReady传入false执行
                 jQuery.ready(true);
             }
         },
@@ -722,61 +763,114 @@
         // Handle when the DOM is ready
         // 准备触发DOM
         ready: function(wait) {
-
+            // 当调用holdReady(false)每次释放判断 --jQuery.readyWait 是否为0 为零继续执行  不为零return
+            // 当是普通形式调用ready() 函数时就 jQuery.isReady 为不为真 如果为真 就相当于DOM已经加载完了 jQuery.isReady 默认为false第一次是不会执行的,当第二次之后就会return
             // Abort if there are pending holds or we're already ready
             if (wait === true ? --jQuery.readyWait : jQuery.isReady) {
                 return;
             }
-
+            // 
             // Remember that the DOM is ready
             jQuery.isReady = true;
-
+            // 还是为等待的次数进行判断  直到jQuery.readyWait等待的次数为零
             // If a normal DOM Ready event fired, decrement, and wait if need be
             if (wait !== true && --jQuery.readyWait > 0) {
                 return;
             }
 
-            // If there are functions bound, to execute
+            // If there are functions bound, to execute 如果有函数绑定，则执行
+            /** 已经完成DOM加载
+             *  resolveWith ==> 已经完成DOM加载触发的函数
+             *  平时只是用readyList.resolve() 这个函数做触发,
+             *  加上Width是可以进行传参处理的, 相当于为jQuery.ready.promise().done(fn); 中缓存起来的fn函数传参
+             *  readyList.resolveWith(document, [jQuery])
+             *  document 是fn的this指向
+             *  [jQuery] 相当于fn的参数
+             *  页面中:
+             *  $(function(e) {
+             *         e: 就是传过来的jquery
+             *          this就是document
+             * })
+             *  */
             readyList.resolveWith(document, [jQuery]);
-
-            // Trigger any bound ready events
+            /**
+             * 这块是为了处理
+             * $(document).ready(function() {})
+             * $(document).on('ready', function() {})
+             * 形式的DOM加载函数的
+             */
+            // Trigger any bound ready events 触发任何绑定就绪事件
             if (jQuery.fn.trigger) {
+                // 触发ready函数之后再取消掉
                 jQuery(document).trigger("ready").off("ready");
             }
         },
 
         // See test/unit/core.js for details concerning isFunction.
-        // Since version 1.3, DOM methods and functions like alert
-        // aren't supported. They return false on IE (#2968).
+        // Since version 1.3, DOM methods and functions like alert 从1.3版开始，DOM方法和函数就像alert
+        // aren't supported. They return false on IE (#2968).aren't supported. They return false on IE
+        /**
+         * 判断是不是函数 返回布尔值
+         * 通过jQuery.type 方法实现, 低版本浏览器返回Object
+        */
         isFunction: function(obj) {
             return jQuery.type(obj) === "function";
         },
-
+        // 判断是不是数组 原生方法
         isArray: Array.isArray,
-
+        // 判断是不是window
         isWindow: function(obj) {
+            /**
+             * 除null 与 undefined之外剩余的都可以往后执行,
+             * window在js中作用, 1. 充当全局对象(window.a = 10) 2. 充当浏览器窗口(window.open()打开一个新窗口) window.window ==> 全局对象下的浏览器窗口
+            */
             return obj != null && obj === obj.window;
         },
-
+        /**
+         * 判断是不是数字类型
+         * parseFloat(123)  ==> !isNaN(123) ==> true
+         * parseFloat(NaN)  ==> !isNaN(NaN) ==> false
+         * isFinite判断计算机所能计算的有限数字 Number.MAX_VAULE ==> 最大有限数字
+         * */ 
         isNumeric: function(obj) {
             return !isNaN(parseFloat(obj)) && isFinite(obj);
         },
-
+        /**
+         * 判断数据类型
+         * 可以区分复杂的数据类型
+         * 主要用的是Object.toString.call()的方法来判断
+         */
         type: function(obj) {
+            /**
+             * null 或 undefined 就返回字符串null undefined
+             */
             if (obj == null) {
                 return String(obj);
             }
             // Support: Safari <= 5.1 (functionish RegExp)
+            // 如果参数复杂类型 或 函数 的数据,就是基本数据类型typeof就可以使用
+            /**
+             * class2type对象存储的是 所对应类型的简写 ==> [object Array]: "array"
+             */
             return typeof obj === "object" || typeof obj === "function" ?
                 class2type[core_toString.call(obj)] || "object" :
                 typeof obj;
         },
-
+        /**
+         * 判断是否为对象字面量
+         * 主要是判断:
+         *  var a = {};
+         *  var a = new Object() 这两种形式的对象
+         * 
+         */
         isPlainObject: function(obj) {
             // Not plain objects:
             // - Any object or value whose internal [[Class]] property is not "[object Object]"
             // - DOM nodes
             // - window
+            /**
+             * obj.nodeType 跟 window 的类型都会返回Obejct, 所以要避免
+             */
             if (jQuery.type(obj) !== "object" || obj.nodeType || jQuery.isWindow(obj)) {
                 return false;
             }
@@ -785,7 +879,18 @@
             // The try/catch suppresses exceptions thrown when attempting to access
             // the "constructor" property of certain host objects, ie. |window.location|
             // https://bugzilla.mozilla.org/show_bug.cgi?id=814622
+            /**
+             * 火狐20版本以下 执行window.constructor.location过多会报错
+             */
             try {
+                /**
+                 * 假如传入的是window对象下的摸个对象这个时候将跳过上面的判断,例如: window.location
+                 * 所以要利用Object.hasOwnProperty() 判断obj.constructor.prototype, 'isPrototypeOf' 查看对象是否有自身的属性自身的属性
+                 * 例如:
+                 *  var arr = [];
+                 *  arr.__proto__.constructor ==> Array.prototype =最外层Object=> Object.prototype
+                 *  只有最外层的Object.prototype上边才有'isPrototypeOf'属性, 所以isPrototypeOf并不是Array.prototype下边的所以Object.hasOwnProperty()会返回假
+                 */
                 if (obj.constructor &&
                     !core_hasOwn.call(obj.constructor.prototype, "isPrototypeOf")) {
                     return false;
@@ -798,7 +903,19 @@
             // |obj| is a plain object, created by {} or constructed with new Object
             return true;
         },
-
+        /** 
+         * 判断是否为空的对象
+         * 利用for in 来实现判断
+         * for in 在遇到 为空的对象 或 数组 就不会执行
+         * for in 系统自带的属性 方法  是遍历不到的 只有自己写手动添加的会遍历到
+         * 例如:
+         *  function add() {}
+         *  add.prototype.constructor = add;
+         *  add.prototype.show = function() {};
+         *  for (var key in add.prototype) {
+         *      key 此时只会输出 show
+         *  }
+         *  */
         isEmptyObject: function(obj) {
             var name;
             for (name in obj) {
@@ -1157,32 +1274,46 @@
         }
     });
     /**
-     * 监测DOM的异步操作（内部使用）
+     * 监测DOM的异步操作（内部使用）创建延迟对象
      */
     jQuery.ready.promise = function(obj) {
+        // 正常情况下这个函数只执行一次,后期执行的是缓存起来的函数
         if (!readyList) {
-
+            // 创建一个延迟对象
             readyList = jQuery.Deferred();
 
-            // Catch cases where $(document).ready() is called after the browser event has already occurred.
-            // we once tried to use readyState "interactive" here, but it caused issues like the one
+            // Catch cases where $(document).ready() is called after the browser event has already occurred.获在浏览器事件已经发生后调用$(document).ready()的情况。
+            // we once tried to use readyState "interactive" here, but it caused issues like the one 我们曾经尝试在这里使用readyState“interactive”，但是它引起了类似的问题
             // discovered by ChrisS here: http://bugs.jquery.com/ticket/12282#comment:15
+            /**
+             * 无论走if 还是 else 最终都是走到jQuery.ready 的工具方法
+             * document.readyState 有一个DOM加载是否完成的状态=> complete
+             *  如果dom已经加载完成 直接调用jQuery.ready就可以了
+             *  setTimeout是为了防止IE浏览器,避免在dom未加载完成 也触发这个函数
+             */
             if (document.readyState === "complete") {
-                // Handle it asynchronously to allow scripts the opportunity to delay ready
+                // Handle it asynchronously to allow scripts the opportunity to delay ready 异步处理它，允许脚本有机会延迟就绪
                 setTimeout(jQuery.ready);
 
             } else {
-
-                // Use the handy event callback
+                /**
+                 * DOM未加载完进行的监测
+                 * 正常情况下DOM加载高于load, 只需要写一个检测事件就可以了, 但是有的浏览器会缓存load, 有可能会先触发缓存的事件, 后触发DOMConetntLoaded事件, 我了实现最快的DOM加载速度, 所以写了两个检测事件,
+                 * 无论走哪个检测事件,所调用的函数都是一样的, 只要有一个事件执行,就会走completed, 在completed函数对两个检测事件进行了删除, 所以无论怎样completed函数也只是触发一次.
+                 */
+                // Use the handy event callback 使用方便的事件回调
                 document.addEventListener("DOMContentLoaded", completed, false);
 
-                // A fallback to window.onload, that will always work
+                // A fallback to window.onload, that will always work 退到窗口。onload，总是可以的
                 window.addEventListener("load", completed, false);
             }
         }
+        // 防止状态被修改
         return readyList.promise(obj);
     };
-
+    /**
+     * 将Object.toString.call() 判断的类型进行 简化便于 type 函数使用
+     */
     // Populate the class2type map
     jQuery.each("Boolean Number String Function Array Date RegExp Object Error".split(" "), function(i, name) {
         class2type["[object " + name + "]"] = name.toLowerCase();
