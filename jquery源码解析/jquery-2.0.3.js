@@ -132,8 +132,8 @@
         /**
          * 对IE的前缀进行匹配
          * 例如 
-         *  webkit在写样式的时候 -webkit-margin-top => webkitMaginTop
-         *  ms在写样式的时候首字母要大写 -ms-margin-top =>MsMarginTop
+         *  webkit在写样式的时候 -webkit-margin-top => WebkitMaginTop
+         *  ms在写样式的时候首字母要大写 -ms-margin-top =>msMarginTop
          */
         // Matches dashed string for camelizing
         rmsPrefix = /^-ms-/,
@@ -142,7 +142,15 @@
          * 转驼峰的回调函数
          */
         // Used by jQuery.camelCase as callback to replace()
+        /**
+         * 在正则匹配中调用该函数
+         * 如果正则带有分组
+         * 		第一个参数就是正则的整体, 第二个参数是正则的子项,第三个参数为下标,第四个参数为源字符串
+         * 如果正则不带有分组
+         * 		第一个参数为正则的整体, 第二个参数为正则的下标, 第三个参数为源字符串
+         */
         fcamelCase = function(all, letter) {
+            // 转大写
             return letter.toUpperCase();
         },
         /**
@@ -206,7 +214,7 @@
                  *  
                  */
                 if (selector.charAt(0) === "<" && selector.charAt(selector.length - 1) === ">" && selector.length >= 3) {
-                    // Assume that strings that start and end with <> are HTML and skip the regex check
+                    // Assume that strings that start and end with <> are HTML and skip the regex check 假设以<>开头和结尾的字符串是HTML，并跳过regex检查
                     match = [null, selector, null]; // match 变量存储着字符串格式：[null, '<div></div>', null] 或  [null, '<div>123</div><div>123</div>', null]
 
                 } else {
@@ -237,7 +245,7 @@
                         /**
                          * 为了在不同的环境下指定根节点
                          * 例如
-                         *  当前环境 默认 
+                         *  当前环境 默认
                          *  第二个参数会是document $('li', document) 原生的写法instanceof返回为 false
                          *  $('li', $(document)) , jq对象$(document)， instanceof jQuery返回为 true , context本身是[document, context: document][0]==>docment
                          *  iframe  嵌套 $('li', contentWindow.document) 此时就可以找到iframe的document 此时li是在对应的iframe中创建的
@@ -643,7 +651,7 @@
                             clone = src && jQuery.isPlainObject(src) ? src : {}; // 判断继承这里边有没有被继承着的属性，存在添加，不存在创建新对象
                         }
 
-                        // Never move original objects, clone them 不要移动原始对象，要克隆它们
+                        // Never move or4                                                                                                                             77iginal objects, clone them 不要移动原始对象，要克隆它们
                         /**
                          * 通过再次调用jQuery.extend方法 递归的形式完成深拷贝
                          */
@@ -737,8 +745,6 @@
         *   alert(2);
         * })
         * 
-        * 
-        * 
         */
         holdReady: function(hold) {
             if (hold) {
@@ -770,7 +776,7 @@
                 return;
             }
             // 
-            // Remember that the DOM is ready
+            // Remember that the DOM is ready 记住，DOM已经准备好了
             jQuery.isReady = true;
             // 还是为等待的次数进行判断  直到jQuery.readyWait等待的次数为零
             // If a normal DOM Ready event fired, decrement, and wait if need be
@@ -885,7 +891,7 @@
             try {
                 /**
                  * 假如传入的是window对象下的摸个对象这个时候将跳过上面的判断,例如: window.location
-                 * 所以要利用Object.hasOwnProperty() 判断obj.constructor.prototype, 'isPrototypeOf' 查看对象是否有自身的属性自身的属性
+                 * 所以要利用Object.hasOwnProperty() 判断obj.constructor.prototype, 'isPrototypeOf' 查看属性是否为自身的属性
                  * 例如:
                  *  var arr = [];
                  *  arr.__proto__.constructor ==> Array.prototype =最外层Object=> Object.prototype
@@ -915,6 +921,13 @@
          *  for (var key in add.prototype) {
          *      key 此时只会输出 show
          *  }
+         * 如果不return/{}/[]则不会打印
+         * function Add() {return [1,2,3]}
+            var a = new Add()
+            for(var key in a) {
+                console.log(key) ==》 1，2，3
+            }
+         * 
          *  */
         isEmptyObject: function(obj) {
             var name;
@@ -923,44 +936,73 @@
             }
             return true;
         },
-
+        // 抛出自定义异常$.error('自定义内容')
         error: function(msg) {
             throw new Error(msg);
         },
 
-        // data: string of html
+        // data: string of html 字符串的html
         // context (optional): If specified, the fragment will be created in this context, defaults to document
         // keepScripts (optional): If true, will include scripts passed in the html string
+        /**
+         * 解析节点把字符串转化成节点
+         * 例如：
+         * var str = '<li></li><li></li><script><\/script>';
+         * parseHTML(str, document, true); ==> [li, li]
+         *      参数：1.节点字符串
+         *           2.执行上下文
+         *           3.布尔值是否解析script标签,默认false不解析
+         */
         parseHTML: function(data, context, keepScripts) {
+            // 判断data是否为空 或 是否为字符串
             if (!data || typeof data !== "string") {
                 return null;
             }
+            /**
+             * 此方法可以省略参数，出第一个参数外，可以省略第二个参数，也就相当于，可以直接传入第三个参数，此处判断为布尔值，将会为，第三个参数赋值
+             * 而context默认就是document
+             */
             if (typeof context === "boolean") {
                 keepScripts = context;
                 context = false;
             }
+            // 为context赋值
             context = context || document;
-
+            /**
+             * rsingleTag.exec(data)匹配所传字符串是否为但标签 ==》 var str = '<li></li>'（单）
+             * 如果keepScripts是false 就会为scripts赋值为[], 在执行多标签创建时传入scripts，之后再删除scriots
+             */
             var parsed = rsingleTag.exec(data),
                 scripts = !keepScripts && [];
 
             // Single tag
+            /**
+             * 如果但标签直接创建标签放入数组中
+             */
             if (parsed) {
                 return [context.createElement(parsed[1])];
             }
-
+            /**
+             * 多标签的创建标签会通过，文档碎片的方式创建节点（jQuery.buildFragment）会返回parsed.childNodes中的值就是所要的内容
+             * 文档碎片形式添加内容： https://www.cnblogs.com/leejersey/p/3516603.html
+             */
             parsed = jQuery.buildFragment([data], context, scripts);
 
             if (scripts) {
                 jQuery(scripts).remove();
             }
-
+            /**
+             * 最后获取到的parsed.childNodes是dom节点不是数组也不是json，所以要 通过merge方法将他转成数组,上方init中再通过调用merge方法传入this对象专程json形式;
+             */
             return jQuery.merge([], parsed.childNodes);
         },
-
+        // json字符串转对象
         parseJSON: JSON.parse,
 
-        // Cross-browser xml parsing
+        // Cross-browser xml parsing 跨浏览器的xml解析
+        /**
+         * 解析XML 把字符串的xml解析成dom节点
+         */
         parseXML: function(data) {
             var xml, tmp;
             if (!data || typeof data !== "string") {
@@ -968,39 +1010,72 @@
             }
 
             // Support: IE9
+            // 必须传入完整的xml字符串，只能parseFromString解析xml的字符串，传html字符串会报错
+            // IE9 或 火狐 会走try catch
             try {
-                tmp = new DOMParser();
-                xml = tmp.parseFromString(data, "text/xml");
+                tmp = new DOMParser(); // 创建解析xml实例对象
+                xml = tmp.parseFromString(data, "text/xml"); // 传xml数据更，数据类型text/xml，返回的就是dom对象
             } catch (e) {
                 xml = undefined;
             }
-
+            // 其他浏览器如果报错会生成<parsererror>错误信息</parsererror>文档结构, 所以判断xml有没有parsererror标签的长度如果有就是报错；
             if (!xml || xml.getElementsByTagName("parsererror").length) {
                 jQuery.error("Invalid XML: " + data);
             }
+            // 抛出正确的
             return xml;
         },
-
+        // 返回空函数， 做插件或组建开发时默认返回空函数
         noop: function() {},
 
         // Evaluates a script in a global context
+        /**
+         * 全局解析js， 可以将局部变量解析为全局的
+         * 例如：
+         *  function test() {
+         *      var a = 10;
+         *      $.globalEval('var a = 10;'); // 转成全局
+         *  }
+         * test()
+         * alert(a); ==> 10
+         */
         globalEval: function(code) {
+            /**
+             * eval即是js下的关键字也是window下的一个属性
+             * eval 跟 window.eval 却别：
+             * 1.当直接调用的时候会当成关键字来使用，只会在局部作用域内使用，
+             *  function test() {
+             *      eval("var a = 10;")
+             *  }
+             *  test(); 此时全局获取a获取不到
+             * 2.window.eval是window全局下的一个属性,
+             * function test() {
+             *      var a = eval;   // 等同于window.eval
+             *      a('var c = 10');
+             * }
+             * test(); 此时全局访问c会获取到10
+             */
             var script,
                 indirect = eval;
-
+            // 将传入的参数前后空格去除
             code = jQuery.trim(code);
-
+            // 参数存在
             if (code) {
-                // If the code includes a valid, prologue position
-                // strict mode pragma, execute code by injecting a
-                // script tag into the document.
+                // If the code includes a valid, prologue position 如果代码包含有效的开场白位置
+                // strict mode pragma, execute code by injecting a 严格的模式杂注，通过注入执行代码
+                // script tag into the document. 脚本标记到文档中。
+                /**
+                 * 判断当前解析的字符串包不包括严格模式，严格模式，不支持eval方法，
+                 * 严格模式中，使用动态创建script标签的形式来生成全局变量，将script标签插入head中;
+                 */
                 if (code.indexOf("use strict") === 1) {
                     script = document.createElement("script");
                     script.text = code;
                     document.head.appendChild(script).parentNode.removeChild(script);
                 } else {
-                    // Otherwise, avoid the DOM node creation, insertion
-                    // and removal by using an indirect global eval
+                    // Otherwise, avoid the DOM node creation, insertion 否则，避免创建、插入DOM节点
+                    // and removal by using an indirect global eval 并通过使用间接的全局eval来删除
+                    // 非严格模式直接使用eval解析字符串,
                     indirect(code);
                 }
             }
@@ -1008,15 +1083,44 @@
 
         // Convert dashed to camelCase; used by the css and data modules
         // Microsoft forgot to hump their vendor prefix (#9572)
+        /**
+         * 转驼峰将css中的样式转成js能接受的形式,js中不接"-"
+         * 需要注意的是:
+         *  iE浏览器转换比较特殊加前缀时首字母不大写,所以ie要先将-ms-转为ms-之后再进行大写转换
+         *  rdashAlpha转驼峰的正则 rdashAlpha = /-([\da-z])/gi;
+         *  fcamelCase转驼峰的函数
+         * 
+         * replace中的第二个参数可以传如一个数组会自动调用， 例如：
+         * function test(all, letter, aa) {
+                console.log(all) ==> 匹配到的字符串 =>   a      b
+                console.log(letter) ==> 匹配到的下标 =>  0      2
+                console.log(aa)     ==> 源字符串     => a1b3   a1b3
+                return all.toUpperCase();
+            }
+            var a = '-1b3';
+            a.replace(/-/g, 'a').replace(/a|b/g, test);
+         */
         camelCase: function(string) {
             return string.replace(rmsPrefix, "ms-").replace(rdashAlpha, fcamelCase);
         },
-
+        /**
+         * 是否为指定节点名（内部）
+         * 判断两个节点名称是否一样
+         * 例如：
+         *  $.nodeName(document.documentElement, 'html'); ===> true
+         *  $.nodeName(document.documentElement, 'body'); ===> false
+         */
         nodeName: function(elem, name) {
+            /**
+             * 获取到节点名称 并将节点名称与传入的name统一转成小写进行比较（nodeName不同的浏览器获取到的有可能是大写也有可能是小写的）
+             */
             return elem.nodeName && elem.nodeName.toLowerCase() === name.toLowerCase();
         },
 
         // args is for internal usage only
+        /**
+         * 遍历集合 属于原生循环的加强版 可以循环：数组 类数组 json对象
+         */
         each: function(obj, callback, args) {
             var value,
                 i = 0,
@@ -1468,7 +1572,12 @@
 
             rnative = /^[^{]+\{\s*\[native \w/,
 
-            // Easily-parseable/retrievable ID or TAG or CLASS selectors
+            // Easily-parseable/retrievable ID or TAG or CLASS selectors 容易解析/可检索的ID或标记或类选择器
+            /**
+             *  https://blog.csdn.net/csm0912/article/details/81206848
+             *  ()表示捕获分组，()会把每个分组里的匹配的值保存起来，使用$n(n是一个数字，表示第n个捕获组的内容)
+                (?:)表示非捕获分组，和捕获分组唯一的区别在于，非捕获分组匹配的值不会保存起来
+             */
             rquickExpr = /^(?:#([\w-]+)|(\w+)|\.([\w-]+))$/,
 
             rinputs = /^(?:input|select|textarea|button)$/i,
